@@ -17,10 +17,10 @@ jobs:
       uses: docker/setup-buildx-action@v1
 
     - name: Build Docker Image
-      run: docker buildx create --use && docker buildx build --platform linux/amd64,linux/arm64 -t ${{ secrets.Docker_User }}/your-app-name .
+      run: docker buildx create --use && docker buildx build --platform linux/amd64,linux/arm64 -t ${{ secrets.Docker_User }}/auto_pipe .
 
     - name: Push to Docker Hub
-      run: echo "${{ secrets.Docker_Token }}" | docker login -u ${{ secrets.Docker_User }} --password-stdin && docker push ${{ secrets.Docker_User }}/your-app-name
+      run: echo "${{ secrets.Docker_Token }}" | docker login -u ${{ secrets.Docker_User }} --password-stdin && docker push ${{ secrets.Docker_User }}/auto_pipe
 
   deploy:
     runs-on: ubuntu-latest
@@ -31,7 +31,7 @@ jobs:
     - name: Deploy to GCP
       run: |
         gcloud auth configure-docker
-        docker pull ${{ secrets.Docker_User }}/your-app-name
-        docker tag ${{ secrets.Docker_User }}/your-app-name gcr.io/your-gcp-project/your-app-name
-        docker push gcr.io/your-gcp-project/your-app-name
-        gcloud run deploy your-app-name --image gcr.io/your-gcp-project/your-app-name --platform managed
+        docker pull ${{ secrets.Docker_User }}/auto_pipe
+        docker tag ${{ secrets.Docker_User }}/auto_pipe gcr.io/your-gcp-project/auto_pipe
+        docker push gcr.io/your-gcp-project/auto_pipe
+        gcloud run deploy auto_pipe --image gcr.io/your-gcp-project/auto_pipe --platform managed
