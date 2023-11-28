@@ -10,17 +10,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v2
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
 
-    - name: Build Docker Image
-      run: docker buildx create --use && docker buildx build --platform linux/amd64,linux/arm64 -t ${{ secrets.Docker_User }}/auto_pipe .
+      - name: Build Docker Image
+        run: docker buildx create --use && docker buildx build --platform linux/amd64,linux/arm64 -t ${{ secrets.Docker_User }}/auto_pipe .
 
-    - name: Push to Docker Hub
-      run: echo "${{ secrets.Docker_Token }}" | docker login -u ${{ secrets.Docker_User }} --password-stdin && docker push ${{ secrets.Docker_User }}/auto_pipe
+      - name: Push to Docker Hub
+        run: echo "${{ secrets.Docker_Token }}" | docker login -u ${{ secrets.Docker_User }} --password-stdin && docker push ${{ secrets.Docker_User }}/auto_pipe
 
   deploy:
     runs-on: ubuntu-latest
@@ -28,10 +28,12 @@ jobs:
     needs: build
 
     steps:
-    - name: Deploy to GCP
-      run: |
-        gcloud auth configure-docker
-        docker pull ${{ secrets.Docker_User }}/auto_pipe
-        docker tag ${{ secrets.Docker_User }}/auto_pipe gcr.io/your-gcp-project/auto_pipe
-        docker push gcr.io/your-gcp-project/auto_pipe
-        gcloud run deploy auto_pipe --image gcr.io/your-gcp-project/auto_pipe --platform managed
+      - name: Authenticate with GCP
+        run: gcloud auth activate-service-account --key-file=${{ secrets.GCP_KEY_FILE }}
+
+      - name: Deploy to GCP
+        run: |
+          gcloud config set project your-gcp-project
+          gcloud config set run/region your-gcp-region
+          gcloud config set run/platform managed
+          gcloud run deploy auto_pipe --image ${{ secrets.Docker_User }}/auto_pipe
