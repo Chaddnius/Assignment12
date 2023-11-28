@@ -1,4 +1,4 @@
-name: Build and Deploy
+name: Build and Push Docker Image
 
 on:
   push:
@@ -10,35 +10,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '14'
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+    - name: Set up Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@master
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}
+        service_account_key: ${{ secrets.GCP_KEY_FILE }}
+        export_default_credentials: true
 
-      - name: Build Docker Image
-        run: docker buildx create --use && docker buildx build --platform linux/amd64,linux/arm64 -t ${{ secrets.Docker_User }}/auto_pipe .
+    - name: Build and push Docker image
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
+        DOCKER_PASSWORD: ${{ secrets.DOCKER_TOKEN }}
+      run: |
+        echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
 
-      - name: Push to Docker Hub
-        run: echo "${{ secrets.Docker_Token }}" | docker login -u ${{ secrets.Docker_User }} --password-stdin && docker push ${{ secrets.Docker_User }}/auto_pipe
+        docker buildx create --use
+        docker buildx inspect default --bootstrap
 
-  deploy:
-    runs-on: ubuntu-latest
-
-    needs: build
-
-    steps:
-      - name: Authenticate with GCP
-        run: gcloud auth activate-service-account --key-file=${{ secrets.GCP_KEY_FILE }}
-
-      - name: Deploy to GCP
-        run: |
-          gcloud config set project project10-403722
-          gcloud config set run/region us-south1-a
-          gcloud config set run/platform managed
-          gcloud run deploy auto_pipe --image ${{ secrets.Docker_User }}/auto_pipe
+        docker buildx build --platform linux/amd64,linux/arm64 -t $DOCKER_USERNAME/auto_pipe:latest -t $DOCKER_USERNAME/auto_pipe:v1 .
+        docker push $DOCKER_USERNAME/auto_pipe
