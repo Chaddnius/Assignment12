@@ -32,11 +32,11 @@ jobs:
         docker build -t $DOCKER_USERNAME/auto_pipe .
         docker push $DOCKER_USERNAME/auto_pipe
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
+deploy:
+  needs: build
+  runs-on: ubuntu-latest
 
-    steps:
+  steps:
     - name: Checkout repository
       uses: actions/checkout@v2
 
@@ -47,9 +47,15 @@ jobs:
         project_id: ${{ secrets.GCP_PROJECT_ID }}
         region: ${{ secrets.GCP_REGION }}
 
+    - name: Debugging information
+      run: |
+        echo "GCP_REGION: ${{ secrets.GCP_REGION }}"
+        gcloud version
+
     - name: Deploy to GCP Cloud Run
       run: |
         gcloud run deploy auto-pipe \
           --image $DOCKER_USERNAME/auto_pipe \
           --platform managed \
           --region ${{ secrets.GCP_REGION }}
+
