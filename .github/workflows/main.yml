@@ -33,7 +33,7 @@ jobs:
 
       - name: Deploy to GCP
         run: |
-          gcloud config set project your-gcp-project
-          gcloud config set run/region your-gcp-region
+          gcloud config set project project10-403722
+          gcloud config set run/region us-south1-a
           gcloud config set run/platform managed
           gcloud run deploy auto_pipe --image ${{ secrets.Docker_User }}/auto_pipe
