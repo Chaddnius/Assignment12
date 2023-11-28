@@ -1,62 +1,36 @@
-name: CI/CD Pipeline
+name: Build and Deploy
 
 on:
   push:
     branches:
       - main
 
-env:
-  DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
-  DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
+    - name: Checkout repository
+      uses: actions/checkout@v2
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.9
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v2
-        with:
-          context: .
-          push: true
-          tags: ${{ env.DOCKER_USERNAME }}/auto_pipe:latest
+    - name: Build and Push Docker image
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}/auto_pipe:latest
+      env:
+        DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
 
   deploy:
-    needs: build
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up gcloud CLI
-        uses: google-github-actions/setup-gcloud@v1.1.1
-        with:
-          service_account_key: ${{ secrets.GCP_KEY_FILE }}
-          project_id: ${{ secrets.GCP_PROJECT_ID }}
-          region: ${{ secrets.GCP_REGION }}
-
-      - name: Debugging information
-        run: |
-          echo "GCP_REGION: ${{ secrets.GCP_REGION }}"
-          gcloud version
-
-      - name: Deploy to GCP Cloud Run
-        run: |
-          gcloud run deploy auto-pipe \
-            --image ${{ env.DOCKER_USERNAME }}/auto_pipe \
-            --platform managed \
-            --region ${{ secrets.GCP_REGION }}
+    - name: Deploy to Cloud Run
+      uses: google-github-actions/deploy-cloudrun@v1
+      with:
+        service: auto-pipe
+        image: ghcr.io/${{ github.repository_owner }}/${{ github.repository_name }}/auto_pipe:latest
+        project: ${{ secrets.GCP_PROJECT_ID }}
+        region: ${{ secrets.GCP_REGION }}
+        credentials: ${{ secrets.GCP_KEY_FILE }}
