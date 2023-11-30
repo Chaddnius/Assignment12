@@ -39,17 +39,16 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-
-    - name: Set up gcloud CLI
-      uses: google-github-actions/setup-gcloud@v1.1.1
+     
+    - name: Setup SSH Key
+      uses: webfactory/ssh-agent@v0.5.3
       with:
-        service_account_key: ${{ secrets.GCP_KEY_FILE }}
-        project_id: ${{ secrets.GCP_PROJECT_ID }}
-        region: ${{ secrets.GCP_REGION }}
+        ssh-private-key: ${{ secrets.GCP_PRIVATE_KEY }}
 
-    - name: Deploy to GCP Cloud Run
+    - name: gcp deploy
       run: |
-        gcloud run deploy auto-pipe \
-          --image $DOCKER_USERNAME/auto_pipe \
-          --platform managed \
-          --region ${{ secrets.GCP_REGION }}
+        ssh -o StrictHostKeyChecking=no -p ${{ secrets.GCP_PORT }} ${{ secrets.GCP_USER }}@${{ secrets.EX_IP }} 'bash -s' << 'EOF'
+          docker stop api-app
+          docker pull rlanman/api-project
+          docker run -d --rm --name api-app -p 80:4000 --network my-network rlanman/api-project
+        EOF
